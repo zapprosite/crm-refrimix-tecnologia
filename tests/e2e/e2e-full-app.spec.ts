@@ -143,17 +143,14 @@ test.describe('CRM Refrimix E2E Full Flow', () => {
         // Wait for dialog to open
         await expect(page.getByRole('dialog')).toBeVisible();
 
-        // The label is not properly associated - use placeholder
-        const titleInput = page.getByPlaceholder('Ex: Instalação Cliente X');
-        await expect(titleInput).toBeVisible();
-        await titleInput.fill('Test Task');
+        // Use robust Test ID
+        await page.getByTestId('task-title-input').fill('Test Task');
 
-        // Select collaborator - click the Responsável combobox
-        const collabCombobox = page.getByRole('dialog').locator('text=Responsável').locator('..').getByRole('combobox');
-        await collabCombobox.click();
+        // Select collaborator - click the Responsável trigger via Test ID
+        await page.getByTestId('task-collab-trigger').click();
         await page.getByRole('option', { name: /Worker 1/i }).click();
 
-        await page.getByRole('button', { name: 'Salvar Tarefa' }).click();
+        await page.getByTestId('task-save-button').click();
         await expect(page.getByText('Tarefa criada!')).toBeVisible({ timeout: 10000 });
     });
 
@@ -179,16 +176,11 @@ test.describe('CRM Refrimix E2E Full Flow', () => {
         // Wait for dialog to open
         await expect(page.getByRole('dialog')).toBeVisible();
 
-        // Labels are not properly linked - use placeholders
-        const descInput = page.getByPlaceholder('Ex: Pagamento Aluguel');
-        await expect(descInput).toBeVisible();
-        await descInput.fill('Test Income');
+        // Use robust Test IDs
+        await page.getByTestId('finance-desc-input').fill('Test Income');
+        await page.getByTestId('finance-amount-input').fill('1000');
 
-        // For value, use spinbutton role (number input)
-        const valueInput = page.getByRole('dialog').getByRole('spinbutton');
-        await valueInput.fill('1000');
-
-        await page.getByRole('button', { name: 'Salvar' }).click();
+        await page.getByTestId('finance-save-button').click();
         await expect(page.getByText('Transação adicionada!')).toBeVisible({ timeout: 10000 });
     });
 });

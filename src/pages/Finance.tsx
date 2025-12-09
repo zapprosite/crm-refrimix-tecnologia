@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { DollarSign, Upload, TrendingDown, Wallet, Building2, User, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -108,12 +108,23 @@ export function Finance() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label>Descrição</Label>
-                  <Input value={newTx.description} onChange={e => setNewTx({ ...newTx, description: e.target.value })} placeholder="Ex: Pagamento Aluguel" />
+                  <Input
+                    data-testid="finance-desc-input"
+                    value={newTx.description}
+                    onChange={e => setNewTx({ ...newTx, description: e.target.value })}
+                    placeholder="Ex: Pagamento Aluguel"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>Valor (R$)</Label>
-                    <Input type="number" value={newTx.amount} onChange={e => setNewTx({ ...newTx, amount: e.target.value })} placeholder="0.00" />
+                    <Input
+                      data-testid="finance-amount-input"
+                      type="number"
+                      value={newTx.amount}
+                      onChange={e => setNewTx({ ...newTx, amount: e.target.value })}
+                      placeholder="0.00"
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>Data</Label>
@@ -151,7 +162,10 @@ export function Finance() {
                   </div>
                 </div>
               </div>
-              <Button onClick={handleAdd}>Salvar</Button>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancelar</Button>
+                <Button onClick={handleAdd} data-testid="finance-save-button">Salvar</Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
