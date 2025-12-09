@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -30,18 +30,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [hasFullAccess, setHasFullAccess] = useState(false);
 
     // Helper to check if email is the super admin
-    const isSuperAdmin = (email?: string | null) => email === ADMIN_EMAIL;
+    const isSuperAdmin = useCallback((email?: string | null) => {
+        return email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    }, []);
 
-    const checkApprovalStatus = async () => {
-        if (!user) {
+    const checkApprovalStatus = useCallback(async (currentUser: User | null) => {
+        if (!currentUser || !currentUser.email) {
             setApprovalStatus(null);
             setIsAdmin(false);
             setHasFullAccess(false);
             return;
         }
 
-        // Super Admin is always approved and has full access
-        if (isSuperAdmin(user.email)) {
+        // Fast path for Super Admin
+        if (isSuperAdmin(currentUser.email)) {
             setApprovalStatus('approved');
             setIsAdmin(true);
             setHasFullAccess(true);
@@ -49,151 +51,142 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
+            // Optimized query: minimal fields, single row
             const { data, error } = await supabase
                 .from('user_profiles')
                 .select('approval_status')
-                .eq('id', user.id)
-                .single();
+                .eq('id', currentUser.id)
+                .maybeSingle(); // Prevents 406 error if multiple rows (shouldn't happen but safer)
 
-            if (error) {
-                console.log('[AuthContext] No profile found, creating one...');
-                // Create profile if doesn't exist
-                const { error: insertError } = await supabase
-                    .from('user_profiles')
-                    .insert({
-                        id: user.id,
-                        email: user.email,
-                        full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-                        avatar_url: user.user_metadata?.avatar_url,
-                        approval_status: 'pending'
-                    });
+            if (error) throw error;
 
-                if (insertError) {
-                    console.error('[AuthContext] Error creating profile:', insertError);
-                }
+            if (!data) {
+                // Profile doesn't exist, try to create it silently
+                console.log('[Auth] Creating missing profile...');
+                await supabase.from('user_profiles').insert({
+                    id: currentUser.id,
+                    email: currentUser.email,
+                    full_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0],
+                    avatar_url: currentUser.user_metadata?.avatar_url,
+                    approval_status: 'pending'
+                });
+
                 setApprovalStatus('pending');
                 setIsAdmin(false);
                 setHasFullAccess(false);
                 return;
             }
 
-            const status = data?.approval_status || 'pending';
+            const status = data.approval_status as ApprovalStatus;
             setApprovalStatus(status);
-
-            // Check if user has full access (approved or admin role logic if implemented later)
-            // For now, only Super Admin and Approved users have access
             setHasFullAccess(status === 'approved');
-            setIsAdmin(false); // Only zappro.ia is admin for now
+            setIsAdmin(false);
 
         } catch (error) {
-            console.error('[AuthContext] Error checking approval:', error);
+            console.error('[Auth] Approval check failed:', error);
+            // Fallback to safe state
             setApprovalStatus('pending');
             setHasFullAccess(false);
             setIsAdmin(false);
         }
-    };
+    }, [isSuperAdmin]);
 
+    // Initial Session Load
     useEffect(() => {
-        console.log('[AuthContext] Initializing auth...');
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            console.log('[AuthContext] Initial session:', session?.user?.id ?? 'null');
-            setUser(session?.user ?? null);
-            setLoading(false);
+        let mounted = true;
+
+        const initAuth = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (mounted) {
+                    if (session?.user) {
+                        setUser(session.user);
+                        await checkApprovalStatus(session.user);
+                    } else {
+                        setUser(null);
+                    }
+                }
+            } catch (error) {
+                console.error('[Auth] Init error:', error);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        initAuth();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (mounted) {
+                setUser(session?.user ?? null);
+                setLoading(true); // Show loading while checking approval
+                await checkApprovalStatus(session?.user ?? null);
+                setLoading(false);
+            }
         });
 
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            console.log('[AuthContext] Auth state changed:', _event, session?.user?.id ?? 'null');
-            setUser(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    // Check approval status when user changes
-    useEffect(() => {
-        if (user) {
-            checkApprovalStatus();
-        } else {
-            setApprovalStatus(null);
-            setIsAdmin(false);
-            setHasFullAccess(false);
-        }
-    }, [user]);
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
+    }, [checkApprovalStatus]);
 
     const signInWithPassword = async (email: string, password: string) => {
-        console.log('[AuthContext] Attempting login for:', email);
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-
-            console.log('[AuthContext] Setting user:', data.user?.id);
-            setUser(data.user);
-            toast.success('Login realizado com sucesso!');
+            toast.success('Bem-vindo de volta!');
         } catch (error: any) {
-            console.error('[AuthContext] Login error:', error);
-            toast.error(`Erro ao fazer login: ${error.message}`);
+            toast.error(error.message || 'Erro ao fazer login');
             throw error;
         }
     };
 
     const signInWithGoogle = async () => {
-        console.log('[AuthContext] Attempting Google login...');
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
                     redirectTo: window.location.origin,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
                 }
             });
-
             if (error) throw error;
         } catch (error: any) {
-            console.error('[AuthContext] Google login error:', error);
-            toast.error(`Erro ao fazer login com Google: ${error.message}`);
+            toast.error(error.message || 'Erro ao iniciar login Google');
             throw error;
         }
     };
 
     const signOut = async () => {
         try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-
+            await supabase.auth.signOut();
             setUser(null);
             setApprovalStatus(null);
             setIsAdmin(false);
             setHasFullAccess(false);
-            toast.success('Logout realizado com sucesso!');
+            toast.success('Desconectado com sucesso');
         } catch (error: any) {
-            console.error('Logout error:', error);
-            toast.error(`Erro ao fazer logout: ${error.message}`);
-            throw error;
+            toast.error('Erro ao sair');
         }
     };
 
     const updateUserStatus = async (userId: string, status: 'approved' | 'rejected' | 'pending') => {
-        if (!isSuperAdmin(user?.email)) {
-            toast.error('Apenas o administrador pode realizar esta ação.');
+        if (!isAdmin) {
+            toast.error('Permissão negada');
             return;
         }
-
         try {
             const { error } = await supabase
                 .from('user_profiles')
                 .update({ approval_status: status })
                 .eq('id', userId);
-
             if (error) throw error;
-            toast.success(`Usuário ${status === 'approved' ? 'aprovado' : 'atualizado'} com sucesso!`);
-        } catch (error: any) {
-            console.error('Error updating user status:', error);
-            toast.error(`Erro ao atualizar status: ${error.message}`);
+            toast.success('Status atualizado!');
+        } catch (error) {
+            toast.error('Erro ao atualizar status');
             throw error;
         }
     };
@@ -208,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             signInWithPassword,
             signInWithGoogle,
             signOut,
-            checkApprovalStatus,
+            checkApprovalStatus: () => checkApprovalStatus(user),
             updateUserStatus
         }}>
             {children}

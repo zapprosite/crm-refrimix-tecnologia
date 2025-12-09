@@ -1,95 +1,110 @@
 #!/usr/bin/env bash
-# install-crm.sh - Instalação automática do CRM Refrimix no Ubuntu
+# install-crm.sh - Instalação automática do CRM Refrimix no Linux (Home do Usuário)
 
 set -e
 
-echo "== CRM Refrimix - Instalação automática (Ubuntu) =="
+echo "== CRM Refrimix - Instalação automática (Linux) =="
 
-# 1) Caminho do projeto (pasta onde está este script)
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "Pasta do projeto: $PROJECT_DIR"
+# 1) Definir diretórios
+# Usa o usuário real se rodando como sudo
+REAL_USER="${SUDO_USER:-$USER}"
+USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_DIR="$USER_HOME/crm-refrimix"
 
-# 2) Garantir que está rodando como root (para apt install)
+echo "Origem: $SOURCE_DIR"
+echo "Destino: $TARGET_DIR"
+
+# 2) Garantir dependências básicas (Node.js) - Requer sudo
 if [ "$EUID" -ne 0 ]; then
-  echo "Reabrindo o script com sudo..."
+  echo "Este script precisa de permissão sudo para instalar dependências (Node.js)."
+  echo "Por favor, digite sua senha se solicitado."
   exec sudo bash "$0" "$@"
 fi
 
-# 3) Verificar / instalar Node.js + npm
+# Agora estamos como root, mas queremos instalar os arquivos como o usuário normal
+echo "Verificando Node.js..."
 if ! command -v node >/dev/null 2>&1; then
-  echo "Node.js não encontrado. Instalando Node.js e npm..."
-  apt update
-  apt install -y nodejs npm
+  echo "Instalando Node.js e npm..."
+  apt-get update
+  apt-get install -y nodejs npm
 else
-  echo "Node.js já está instalado."
+  echo "Node.js já instalado."
 fi
 
-# 4) Instalar dependências do projeto
-cd "$PROJECT_DIR"
+# 3) Copiar arquivos para a home do usuário
+echo "Copiando arquivos para $TARGET_DIR..."
+# Cria diretório como o usuário real
+sudo -u "$REAL_USER" mkdir -p "$TARGET_DIR"
 
-if [ ! -d "node_modules" ]; then
-  echo "Instalando dependências npm..."
-  npm install --legacy-peer-deps
-else
-  echo "Dependências já instaladas (pasta node_modules existe)."
-fi
+# Copia arquivos (excluindo node_modules e .git)
+rsync -av --exclude 'node_modules' --exclude '.git' --exclude 'install-crm.sh' "$SOURCE_DIR/" "$TARGET_DIR/"
 
-# 5) Gerar script start-crm.sh
-echo "Gerando start-crm.sh..."
+# Ajusta permissões garantindo que o usuário seja dono
+chown -R "$REAL_USER:$REAL_USER" "$TARGET_DIR"
 
-cat > "$PROJECT_DIR/start-crm.sh" << 'EOF'
+# 4) Instalar dependências npm (como usuário normal)
+echo "Instalando dependências npm..."
+sudo -u "$REAL_USER" bash -c "cd '$TARGET_DIR' && npm install --legacy-peer-deps"
+
+# 5) Criar script de inicialização
+START_SCRIPT="$TARGET_DIR/start-crm.sh"
+echo "Gerando $START_SCRIPT..."
+
+cat > "$START_SCRIPT" << EOF
 #!/usr/bin/env bash
-# start-crm.sh - Inicia o CRM Refrimix
-
-set -e
-
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$PROJECT_DIR"
-
+cd "$TARGET_DIR"
 echo "Iniciando CRM Refrimix..."
 
-# Abre um terminal separado rodando o servidor
+# Tenta abrir terminal
 if command -v gnome-terminal >/dev/null 2>&1; then
-  gnome-terminal -- bash -lc "cd '$PROJECT_DIR'; npm run dev; exec bash"
+  gnome-terminal -- bash -c "npm run dev; exec bash"
+elif command -v konsole >/dev/null 2>&1; then
+  konsole -e bash -c "npm run dev; exec bash"
+elif command -v xterm >/dev/null 2>&1; then
+  xterm -e bash -c "npm run dev; exec bash"
 else
-  # fallback: roda no mesmo terminal
-  npm run dev
+  # Background fallback
+  npm run dev &
 fi
 
-# Abre o navegador na aplicação
-if command -v xdg-open >/dev/null 2>&1; then
-  xdg-open "http://localhost:5173" >/dev/null 2>&1 &
-fi
+sleep 3
+xdg-open "http://localhost:5173"
 EOF
 
-chmod +x "$PROJECT_DIR/start-crm.sh"
+chown "$REAL_USER:$REAL_USER" "$START_SCRIPT"
+chmod +x "$START_SCRIPT"
 
-# 6) Criar atalho .desktop na área de trabalho do usuário
-#    (usa o usuário que chamou o sudo, não o root)
-USER_NAME="${SUDO_USER:-$USER}"
-USER_HOME="$(eval echo "~$USER_NAME")"
+# 6) Criar atalho .desktop
 DESKTOP_DIR="$USER_HOME/Desktop"
+# Verifica se pasta Desktop ou Área de Trabalho existe
+if [ ! -d "$DESKTOP_DIR" ]; then
+    if [ -d "$USER_HOME/Área de Trabalho" ]; then
+        DESKTOP_DIR="$USER_HOME/Área de Trabalho"
+    fi
+fi
 
-echo "Criando atalho na área de trabalho em: $DESKTOP_DIR"
-
-mkdir -p "$DESKTOP_DIR"
-
-ICON_PATH="$PROJECT_DIR/icone/00-logo.png"  # pode ser .png mesmo para .desktop
-
-cat > "$DESKTOP_DIR/CRM-Refrimix.desktop" << EOF
+if [ -d "$DESKTOP_DIR" ]; then
+    echo "Criando atalho em $DESKTOP_DIR..."
+    SHORTCUT="$DESKTOP_DIR/CRM-Refrimix.desktop"
+    
+    cat > "$SHORTCUT" << EOF
 [Desktop Entry]
 Type=Application
 Name=CRM Refrimix
-Comment=Iniciar CRM Refrimix
-Exec=$PROJECT_DIR/start-crm.sh
-Icon=$ICON_PATH
+Comment=Sistema de Gestão HVAC
+Exec=$START_SCRIPT
+Icon=$TARGET_DIR/icone/00-logo.png
 Terminal=false
-Categories=Utility;
+Categories=Office;Utility;
 EOF
-
-chmod +x "$DESKTOP_DIR/CRM-Refrimix.desktop"
+    
+    chown "$REAL_USER:$REAL_USER" "$SHORTCUT"
+    chmod +x "$SHORTCUT"
+else
+    echo "Pasta Desktop não encontrada. Atalho não criado, mas você pode rodar via terminal."
+fi
 
 echo ""
-echo "Instalação concluída!"
-echo "- Use o atalho 'CRM Refrimix' na área de trabalho para abrir o sistema."
-echo "- Ou rode manualmente: $PROJECT_DIR/start-crm.sh"
+echo "Instalação concluída com sucesso em $TARGET_DIR!"
+echo "Para iniciar: $START_SCRIPT"

@@ -12,8 +12,10 @@ export interface Lead {
     email?: string;
     document?: string;
     address?: string;
+    number?: string;
     city?: string;
     state?: string;
+    zip?: string;
 }
 
 export interface Appointment {
@@ -111,4 +113,31 @@ export interface Supplier {
     email: string;
     phone: string;
     leadTimeDays: number;
+}
+
+// Quote types
+export interface QuoteItem {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+}
+
+export interface QuoteData {
+    quoteNumber: string;
+    clientName: string;
+    clientDocument?: string;
+    clientPhone?: string;
+    clientEmail?: string;
+    clientAddress?: string;
+    items: QuoteItem[];
+    notes?: string;
+    validityDays: number;
+    paymentCondition: string;
+}
+
+export interface SavedQuote extends QuoteData {
+    id: string;
+    createdAt: string;
+    totalValue: number;
 }

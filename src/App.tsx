@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Login } from './components/auth/Login';
 import { PendingApproval } from './components/auth/PendingApproval';
+import { FullScreenLoading } from './components/ui/LoadingSpinner';
 
 function App() {
   return (
@@ -31,14 +32,7 @@ function AuthGuard() {
 
   // Loading auth state
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoading text="Autenticando..." />;
   }
 
   // Not logged in

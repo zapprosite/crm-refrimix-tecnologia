@@ -1,9 +1,12 @@
 # install-crm.ps1
-# Instalação automática do CRM Refrimix no Windows
+# Instalação automática do CRM Refrimix no Windows 11
+# Instala em C:\crm-refrimix e cria atalho no Desktop
 
 $ErrorActionPreference = "Stop"
+$TargetDir = "C:\crm-refrimix"
 
-Write-Host "== CRM Refrimix - Instalação automática ==" -ForegroundColor Cyan
+Write-Host "== CRM Refrimix - Instalação automática (Windows 11) ==" -ForegroundColor Cyan
+Write-Host "Alvo de instalação: $TargetDir" -ForegroundColor Cyan
 
 # 1) Garantir que está como administrador
 $currUser = New-Object Security.Principal.WindowsPrincipal(
@@ -18,75 +21,86 @@ if (-not $currUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrat
     exit
 }
 
-# 2) Caminho do projeto (pasta onde está este script)
-$ProjectPath = Split-Path -Parent $PSCommandPath
-Write-Host "Pasta do projeto: $ProjectPath" -ForegroundColor Cyan
+# 2) Definir diretório de origem (onde o script está)
+$SourcePath = Split-Path -Parent $PSCommandPath
+Write-Host "Pasta de origem (Source): $SourcePath" -ForegroundColor Cyan
 
-Set-Location $ProjectPath
+# 3) Copiar arquivos para C:\crm-refrimix
+Write-Host "Copiando arquivos para $TargetDir..." -ForegroundColor Cyan
+if (Test-Path $TargetDir) {
+    Write-Host "O diretório $TargetDir já existe. Atualizando arquivos..." -ForegroundColor Yellow
+} else {
+    New-Item -Path $TargetDir -ItemType Directory -Force | Out-Null
+}
 
-# 3) Ajustar ExecutionPolicy (se permitido)
-Write-Host "Ajustando permissões do PowerShell para este usuário (se permitido)..." -ForegroundColor Cyan
+# Copia tudo, exceto node_modules e .git para evitar lentidão/erros
+# Robocopy é mais eficiente para isso, mas Copy-Item é mais nativo do PS.
+# Vamos usar Copy-Item com exclusões básicas
+$exclude = @('node_modules', '.git', '.env', 'install-crm.ps1', 'install-crm.sh')
+Get-ChildItem -Path $SourcePath -Exclude $exclude | Copy-Item -Destination $TargetDir -Recurse -Force
+
+Set-Location $TargetDir
+
+# 3.1) Restaurar .env se não existir, ou criar exemplo
+if (-not (Test-Path ".env")) {
+    if (Test-Path "$SourcePath\.env") {
+        Copy-Item "$SourcePath\.env" "$TargetDir\.env"
+    } elseif (Test-Path ".env.example") {
+        Copy-Item ".env.example" ".env"
+        Write-Host "Arquivo .env criado a partir do exemplo. Configure-o se necessário." -ForegroundColor Yellow
+    }
+}
+
+# 4) Ajustar ExecutionPolicy
+Write-Host "Ajustando permissões do PowerShell..." -ForegroundColor Cyan
 try {
     Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force -ErrorAction Stop
-}
-catch {
-    Write-Host "Não foi possível alterar a ExecutionPolicy. Mensagem:" -ForegroundColor Yellow
-    Write-Host $_.Exception.Message -ForegroundColor DarkYellow
-    Write-Host "Continuando mesmo assim, pois a política efetiva já permite rodar este script." -ForegroundColor Yellow
+} catch {
+    Write-Host "Aviso: Não foi possível alterar ExecutionPolicy. Continuando..." -ForegroundColor Yellow
 }
 
-# 4) Verificar / instalar Node.js LTS via winget
+# 5) Verificar Node.js
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Write-Host "Node.js não encontrado. Instalando Node.js LTS via winget..." -ForegroundColor Yellow
+    Write-Host "Node.js não encontrado. Tentando instalar via winget..." -ForegroundColor Yellow
     winget install --id OpenJS.NodeJS.LTS -e --source winget
+    # Atualiza env vars
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 } else {
     Write-Host "Node.js já está instalado." -ForegroundColor Green
 }
 
-# 5) Instalar dependências do projeto
-if (-not (Test-Path "node_modules")) {
-    Write-Host "Instalando dependências npm..." -ForegroundColor Cyan
-    npm install --legacy-peer-deps
-} else {
-    Write-Host "Dependências já instaladas (node_modules existe)." -ForegroundColor Green
-}
+# 6) Instalar dependências no destino
+Write-Host "Instalando dependências npm em $TargetDir..." -ForegroundColor Cyan
+npm install --legacy-peer-deps
 
-# 6) Gerar script start-crm.ps1
-Write-Host "Gerando script start-crm.ps1..." -ForegroundColor Cyan
-
-$startScript = @'
+# 7) Gerar script de inicialização (start-crm.ps1) dentro de C:\crm-refrimix
+$startScriptContent = @"
 # start-crm.ps1
-$ErrorActionPreference = "Stop"
-
-$ProjectPath = Split-Path -Parent $PSCommandPath
-Set-Location $ProjectPath
+`$ErrorActionPreference = "Stop"
+Set-Location "$TargetDir"
 
 Write-Host "Iniciando CRM Refrimix..." -ForegroundColor Cyan
-
-# Abre um terminal separado rodando o servidor
-Start-Process "cmd.exe" "/k cd /d `"$ProjectPath`" && npm run dev"
-
-# Abre o navegador padrão
+Start-Process "cmd.exe" "/k cd /d "$TargetDir" && npm run dev"
 Start-Process "http://localhost:5173"
-'@
+"@
 
-$startScriptPath = Join-Path $ProjectPath "start-crm.ps1"
-$startScript | Set-Content -Path $startScriptPath -Encoding UTF8
+$StartScriptPath = Join-Path $TargetDir "start-crm.ps1"
+$startScriptContent | Set-Content -Path $StartScriptPath -Encoding UTF8
 
-# 7) Criar atalho na área de trabalho
-Write-Host "Criando atalho na área de trabalho..." -ForegroundColor Cyan
-
-$DesktopPath  = [Environment]::GetFolderPath('Desktop')
+# 8) Criar atalho na Área de Trabalho
+Write-Host "Criando atalho na Área de Trabalho..." -ForegroundColor Cyan
+$DesktopPath = [Environment]::GetFolderPath('Desktop')
 $ShortcutPath = Join-Path $DesktopPath "CRM Refrimix.lnk"
 
-$WshShell   = New-Object -ComObject WScript.Shell
-$Shortcut   = $WshShell.CreateShortcut($ShortcutPath)
-$Shortcut.TargetPath       = "powershell.exe"
-$Shortcut.Arguments        = "-ExecutionPolicy Bypass -File `"$startScriptPath`""
-$Shortcut.WorkingDirectory = $ProjectPath
+$WshShell = New-Object -ComObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut($ShortcutPath)
+$Shortcut.TargetPath = "powershell.exe"
+$Shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$StartScriptPath`""
+$Shortcut.WorkingDirectory = $TargetDir
+$Shortcut.Description = "Iniciar CRM Refrimix"
 
-# Usa o ícone da pasta icone (ajuste o nome se for diferente)
-$IconPath = Join-Path $ProjectPath "icone\00-logo.ico"
+# Ícone
+$IconPath = Join-Path $TargetDir "icone\00-logo.ico"
 if (Test-Path $IconPath) {
     $Shortcut.IconLocation = $IconPath
 }
@@ -94,5 +108,6 @@ if (Test-Path $IconPath) {
 $Shortcut.Save()
 
 Write-Host ""
-Write-Host "Instalação concluída com sucesso!" -ForegroundColor Green
-Write-Host "Use o atalho 'CRM Refrimix' na área de trabalho para abrir o sistema." -ForegroundColor Green
+Write-Host "Instalação concluída com sucesso em $TargetDir!" -ForegroundColor Green
+Write-Host "Atalho criado na Área de Trabalho." -ForegroundColor Green
+pause

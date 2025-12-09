@@ -1,0 +1,41 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] › tests/e2e/e2e-full-app.spec.ts:147:5 › CRM Refrimix E2E Full Flow › 3. Leads CRUD
+[1A[2K[chromium] › tests/e2e/e2e-full-app.spec.ts:147:5 › CRM Refrimix E2E Full Flow › 3. Leads CRUD
+Intercepted Auth Token Request: https://hmankqmekzcmhopxrcpo.supabase.co/auth/v1/token?grant_type=password
+
+[1A[2K  1) [chromium] › tests/e2e/e2e-full-app.spec.ts:147:5 › CRM Refrimix E2E Full Flow › 3. Leads CRUD 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText('Lead adicionado!')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText('Lead adicionado!')[22m
+
+
+      195 |
+      196 |         // Verify Success Toast (More robust than table update in stateless mocks)
+    > 197 |         await expect(page.getByText('Lead adicionado!')).toBeVisible();
+          |                                                          ^
+      198 |     });
+      199 |
+      200 |     test('4. Tasks CRUD', async ({ page }) => {
+        at /srv/projects/crm-refrimix/tests/e2e/e2e-full-app.spec.ts:197:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/e2e-full-app-CRM-Refrimix-E2E-Full-Flow-3-Leads-CRUD-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/e2e-full-app-CRM-Refrimix-E2E-Full-Flow-3-Leads-CRUD-chromium/error-context.md
+
+
+[1A[2K  1 failed
+    [chromium] › tests/e2e/e2e-full-app.spec.ts:147:5 › CRM Refrimix E2E Full Flow › 3. Leads CRUD ─
+
+[36m  Serving HTML report at http://localhost:44155. Press Ctrl+C to quit.[39m
