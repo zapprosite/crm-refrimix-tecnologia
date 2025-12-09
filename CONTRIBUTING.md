@@ -1,110 +1,55 @@
 # Contribuindo para o CRM Refrimix
 
-Obrigado por considerar contribuir! Este guia vai te ajudar a começar.
+Obrigado por considerar contribuir para o CRM Refrimix! Este documento fornece diretrizes para garantir que o desenvolvimento seja consistente e de alta qualidade.
 
-## 🚀 Setup do Ambiente
+## 🚀 Como Começar
 
-### Pré-requisitos
-- Node.js 18+
-- npm ou pnpm
-- Conta no Supabase (ou usar o projeto existente)
+1.  **Fork** o repositório no GitHub.
+2.  **Clone** o seu fork para sua máquina local.
+3.  Crie uma **Branch** para sua feature ou correção: `git checkout -b feat/minha-feature`.
 
-### Instalação
+## 🛠️ Padrões de Desenvolvimento
 
-```bash
-# Clonar repositório
-git clone <repo-url>
-cd crm-refrimix
+Para manter a base de código limpa e sustentável, seguimos regras estritas.
 
-# Instalar dependências
-npm install
+### 🤖 Desenvolvimento com IA (Agents)
+Se você está usando Agentes de IA (como Cline, Bolt, etc) para contribuir, **LEIA OBRIGATORIAMENTE** o arquivo [AGENTS.md](AGENTS.md). Ele contém regras anti-alucinação vitais para este projeto.
 
-# Configurar variáveis de ambiente
-cp .env.example .env
-# Editar .env com suas credenciais Supabase
+### Estilo de Código & Linting
+- **TypeScript Strict**: Tipagem forte é obrigatória. Evite `any`.
+- **Componentes**: Use componentes funcionais e hooks.
+- **UI**: Utilize os componentes do `shadcn/ui` em `src/components/ui` sempre que possível para manter a consistência visual.
+- **Ícones**: Use `lucide-react`.
 
-# Iniciar dev server
-npm run dev
-```
-
-## 📝 Convenções de Código
-
-### Commits
-Usamos commits semânticos:
-
-```
-feat: adiciona novo relatório de vendas
-fix: corrige cálculo de saldo CPF
-docs: atualiza README com instruções
-style: formata código com prettier
-refactor: simplifica lógica de importação CSV
-test: adiciona testes para Finance
-chore: atualiza dependências
-```
-
-### TypeScript
-- Use tipos explícitos, evite `any`
-- Defina interfaces em `AppContext.tsx` ou arquivos `.d.ts`
-
-### React
-- Componentes funcionais com hooks
-- Props tipadas com interface
-- Estado global via `useApp()`
+### Estrutura de Pastas
+- `src/components/ui`: Componentes base (botões, inputs, etc).
+- `src/pages`: Páginas da aplicação (rotas).
+- `src/context`: Gerenciamento de estado global.
+- `src/hooks`: Hooks customizados (lógica de negócio).
+- `src/types`: Definições de tipos compartilhados.
+- `src/lib`: Utilitários e configurações (Supabase, utils).
 
 ## 🧪 Testes
 
-Antes de abrir PR:
+Garantimos a qualidade através de testes automatizados. Antes de enviar seu PR:
 
-```bash
-# Lint
-npm run lint
+1.  Rode o lint: `npm run lint`
+2.  Verifique o build: `npm run build`
+3.  Se implementou nova lógica, adicione testes em `tests/`.
 
-# Build sem erros
-npm run build
+## 📝 Processo de Pull Request
 
-# Testes E2E (se Playwright instalado)
-npx playwright test
-```
-
-## 📁 Estrutura de PRs
-
-1. **Título claro**: `feat: adiciona filtro por período no financeiro`
-2. **Descrição**: O que, por que, como testar
-3. **Screenshots**: Se houver mudanças visuais
-4. **Testes**: Novos ou atualizados
+1.  Garanta que seu código segue os padrões acima.
+2.  Teste suas alterações localmente.
+3.  Abra um PR para a branch `main`.
+4.  Descreva claramente o que foi alterado e o motivo.
+5.  Anexe screenshots se houver mudanças visuais.
 
 ## 🐛 Reportando Bugs
 
-Use o template:
+Use a aba [Issues](https://github.com/zapprosite/crm-refrimix-tecnologia/issues) do GitHub para reportar problemas. Inclua:
+- Passos para reproduzir
+- Comportamento esperado vs real
+- Logs ou screenshots do erro
 
-```markdown
-**Descrição**
-O que aconteceu vs. o que deveria acontecer
-
-**Passos para Reproduzir**
-1. Vá para...
-2. Clique em...
-3. Veja o erro
-
-**Ambiente**
-- OS: Windows 11
-- Browser: Chrome 120
-- Node: 18.x
-
-**Screenshots**
-Se aplicável
-```
-
-## 💡 Sugerindo Features
-
-Abra uma issue com:
-- Problema que resolve
-- Proposta de solução
-- Alternativas consideradas
-
-## 📚 Recursos
-
-- [Documentação Supabase](https://supabase.com/docs)
-- [shadcn/ui](https://ui.shadcn.com)
-- [Tailwind CSS](https://tailwindcss.com/docs)
-- [Playwright](https://playwright.dev/docs/intro)
+Obrigado por ajudar a tornar o CRM Refrimix melhor! 🚀
