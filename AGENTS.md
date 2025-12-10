@@ -69,6 +69,43 @@ COMO comunicar:
 
 ---
 
+## 🧠 Regras Específicas: Cérebro Refrimix (Chatbot Agent)
+
+### Arquitetura do Chatbot
+
+```
+src/lib/ai/
+├── agent.ts          → AIManager (system prompt, conversation loop)
+├── tool-registry.ts  → Implementação das tools
+├── tools-schema.ts   → Schema OpenAI das tools
+├── types.ts          → Tipos TypeScript
+├── useAgent.ts       → Hook React
+└── providers/        → Ollama, OpenAI, Google, Anthropic, Perplexity
+```
+
+### Regras para Modificar o Chatbot
+
+1. **System Prompt** (`agent.ts`):
+   - DEVE forçar uso de tools explicitamente
+   - DEVE listar todas as tools disponíveis
+   - DEVE ter exemplos de comportamento correto vs errado
+
+2. **Adicionar Nova Tool**:
+   - Adicionar schema em `tools-schema.ts`
+   - Implementar função em `tool-registry.ts`
+   - Se precisar de contexto React, usar `registerToolAction` no componente
+
+3. **Testar Mudanças**:
+   - `npm run build` deve passar
+   - Testar manualmente no chat
+   - Rodar `npx playwright test crm-e2e`
+
+### Workflow para Continuar Desenvolvimento
+
+Consulte: `.agent/workflows/chatbot-development.md`
+
+---
+
 ## Padrões de Código para Evitar Bugs
 
 ### TypeScript
@@ -112,6 +149,23 @@ if (!data || data.length === 0) {
   // Tratar caso vazio
 }
 ```
+
+---
+
+## Task Management
+
+### Arquivo de Tasks
+
+O arquivo `.gemini/antigravity/brain/{session}/task.md` mantém o backlog atual.
+
+**Formato**:
+```markdown
+- [ ] Task pendente
+- [/] Task em progresso
+- [x] Task completa
+```
+
+**Regra**: Ao completar uma task, marque como `[x]` e passe para a próxima.
 
 ---
 

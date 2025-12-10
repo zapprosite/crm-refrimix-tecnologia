@@ -205,7 +205,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed: no blocking
 
   // --- Fetch Data ---
   const fetchData = async () => {
@@ -261,6 +261,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Background data fetching - non-blocking
+  // App shell renders immediately, data populates when ready
   useEffect(() => {
     fetchData();
   }, []);
@@ -687,17 +689,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     inventory: { totalValue: invTotalValue, lowStockCount }
   };
 
-  // Show loading spinner while fetching data
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">Carregando dados...</p>
-        </div>
-      </div>
-    );
-  }
+  // REMOVED: Blocking spinner - App shell now renders immediately
+  // Modules load their own data when mounted
 
   return (
     <AppContext.Provider value={{

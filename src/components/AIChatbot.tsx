@@ -1,140 +1,81 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, Send, X, Minimize2, Maximize2, Sparkles } from 'lucide-react';
+import { Bot, Send, X, Minimize2, Maximize2, Sparkles, Settings as SettingsIcon, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { useAgent } from '@/lib/ai/useAgent';
+import { AIConfig, AIProviderType } from '@/lib/ai/types';
 
 export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Olá! Sou o assistente Refrimix Tecnologia. Posso ajudar com leads, agendamentos, orçamentos, PMOC, Financeiro e Tarefas!' }
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
-  
-  const { kpis, addLead, exportLeadsToCSV } = useApp();
+  const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load Config from localStorage or Env (Ollama as default "Poor Dev" option)
+  const [config, setLocalConfig] = useState<AIConfig>(() => {
+    const saved = localStorage.getItem('crm_ai_config');
+    if (saved) return JSON.parse(saved);
+
+    // Default: Ollama local (grátis)
+    return {
+      provider: 'ollama' as const,
+      model: import.meta.env.VITE_OLLAMA_MODEL || 'llama3.1:8b-instruct-q5_K_M',
+      baseUrl: import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434',
+      apiKey: ''
+    };
+  });
+
+  const { messages, input, setInput, isLoading, sendMessage, setConfig, registerToolAction } = useAgent(config);
+
+  // Persist Config
+  useEffect(() => {
+    localStorage.setItem('crm_ai_config', JSON.stringify(config));
+  }, [config]);
+
+  // We should also persist messages, but let's handle that in useAgent or here.
+  // Ideally useAgent handles it, but since messages are returned from there,
+  // we can sync them here or modify useAgent. 
+  // Let's modify useAgent to handle message persistence for better encapsulation.
+
+
+  // Register Navigation Tool
+  useEffect(() => {
+    registerToolAction('navigate', async (args: { path: string }) => {
+      navigate(args.path);
+      return `Naveguei para ${args.path} com sucesso.`;
+    });
+  }, [navigate, registerToolAction]);
+
+  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isTyping]);
-
-  const processCommand = async (text: string) => {
-    const lowerText = text.toLowerCase();
-    let response = "Desculpe, não entendi. Tente comandos como 'Ir para financeiro', 'Novo orçamento' ou 'Resumo'.";
-
-    setIsTyping(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // --- NAVEGAÇÃO ---
-    if (lowerText.includes('ir para') || lowerText.includes('navegar') || lowerText.includes('abrir')) {
-      if (lowerText.includes('dashboard') || lowerText.includes('início')) {
-        navigate('/');
-        response = "Navegando para o Dashboard.";
-      } else if (lowerText.includes('lead') || lowerText.includes('cliente')) {
-        navigate('/leads');
-        response = "Abrindo a gestão de Leads e Clientes.";
-      } else if (lowerText.includes('agenda') || lowerText.includes('agendamento')) {
-        navigate('/schedule');
-        response = "Mostrando sua Agenda de serviços.";
-      } else if (lowerText.includes('tarefa') || lowerText.includes('equipe')) {
-        navigate('/tasks');
-        response = "Abrindo o quadro de Tarefas e Equipes.";
-      } else if (lowerText.includes('orçamento') || lowerText.includes('proposta')) {
-        navigate('/quotes');
-        response = "Abrindo o Gerador de Orçamentos.";
-      } else if (lowerText.includes('manutenção') || lowerText.includes('pmoc')) {
-        navigate('/maintenance');
-        response = "Acessando módulo de Manutenção e PMOC.";
-      } else if (lowerText.includes('financeiro') || lowerText.includes('caixa') || lowerText.includes('banco')) {
-        navigate('/finance');
-        response = "Abrindo o módulo Financeiro.";
-      }
-    }
-    
-    // --- CONSULTAS ---
-    else if (lowerText.includes('quantos leads') || lowerText.includes('total de leads')) {
-      response = `Atualmente temos ${kpis.newLeads} leads cadastrados.`;
-    } else if (lowerText.includes('faturamento') || lowerText.includes('receita')) {
-      response = `O faturamento total (leads fechados) é de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.totalRevenue)}.`;
-    } else if (lowerText.includes('saldo') || lowerText.includes('caixa')) {
-      response = `Saldo Geral: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.financial.balanceTotal)}. (CNPJ: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.financial.balanceCNPJ)} | CPF: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.financial.balanceCPF)})`;
-    } else if (lowerText.includes('resumo') || lowerText.includes('hoje')) {
-      response = `Resumo: ${kpis.newLeads} leads ativos, ${kpis.scheduledServices} serviços agendados. Saldo em caixa: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.financial.balanceTotal)}.`;
-    }
-
-    // --- AÇÕES GERAIS ---
-    else if (lowerText.includes('novo orçamento')) {
-        navigate('/quotes');
-        response = "Vou te levar para a tela de criação de orçamentos.";
-    }
-    else if (lowerText.includes('nova tarefa')) {
-        navigate('/tasks');
-        response = "Vou te levar para o quadro de tarefas para você adicionar uma nova.";
-    }
-    else if (lowerText.includes('exportar') && lowerText.includes('csv')) {
-      exportLeadsToCSV();
-      response = "Iniciando o download do arquivo CSV com a lista de leads.";
-    }
-    else if (lowerText.includes('limpar conversa')) {
-        setMessages([{ id: Date.now().toString(), role: 'assistant', content: 'Conversa limpa. Como posso ajudar agora?' }]);
-        setIsTyping(false);
-        return;
-    }
-
-    // --- AÇÕES: NOVO LEAD ---
-    else if (lowerText.startsWith('novo lead') || lowerText.startsWith('adicionar lead')) {
-      const name = text.replace(/novo lead|adicionar lead/gi, '').trim();
-      if (name.length > 2) {
-        addLead({
-          name: name,
-          company: 'Via Chatbot',
-          phone: '(00) 00000-0000',
-          status: 'Novo',
-          source: 'Chatbot',
-          email: 'pendente@email.com',
-          document: '000.000.000-00',
-          value: 0
-        });
-        response = `Lead "${name}" criado! Acesse a aba de Leads para completar o cadastro.`;
-        navigate('/leads');
-      } else {
-        response = "Para adicionar, diga 'Novo lead [Nome do Cliente]'.";
-      }
-    }
-
-    setIsTyping(false);
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: response }]);
-  };
+  }, [messages, isLoading]);
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim()) return;
+    sendMessage(input);
+  };
 
-    const userMsg = input;
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: userMsg }]);
-    setInput('');
-    
-    processCommand(userMsg);
+  const saveSettings = () => {
+    setConfig(config);
+    setShowSettings(false);
   };
 
   if (!isOpen) {
     return (
       <Button
+        data-testid="chatbot-trigger"
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 z-50 animate-in zoom-in duration-300"
       >
@@ -153,9 +94,12 @@ export function AIChatbot() {
           <div className="bg-blue-500 p-1.5 rounded-full">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
-          <CardTitle className="text-sm font-medium">Assistente Refrimix Tecnologia</CardTitle>
+          <CardTitle className="text-sm font-medium">Cérebro Refrimix</CardTitle>
         </div>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-300 hover:text-white" onClick={() => setShowSettings(!showSettings)}>
+            <SettingsIcon className="h-3 w-3" />
+          </Button>
           <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-300 hover:text-white" onClick={() => setIsMinimized(!isMinimized)}>
             {isMinimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
           </Button>
@@ -164,60 +108,114 @@ export function AIChatbot() {
           </Button>
         </div>
       </CardHeader>
-      
+
       {!isMinimized && (
         <>
-          <CardContent className="flex-1 p-4 overflow-hidden bg-slate-50 relative">
-            <ScrollArea className="h-full pr-4">
-              <div className="space-y-4 pb-2">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      "flex w-full",
-                      msg.role === 'user' ? "justify-end" : "justify-start"
-                    )}
-                  >
+          <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50 relative flex flex-col">
+            {showSettings ? (
+              <div className="p-4 space-y-4 bg-white h-full">
+                <h3 className="font-bold text-sm">Configuração da IA</h3>
+
+                <div className="space-y-2">
+                  <Label>Provedor</Label>
+                  <Select value={config.provider} onValueChange={(v: AIProviderType) => setLocalConfig({ ...config, provider: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                      <SelectItem value="google">Google Gemini</SelectItem>
+                      <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                      <SelectItem value="perplexity">Perplexity</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Modelo</Label>
+                  <Input value={config.model} onChange={e => setLocalConfig({ ...config, model: e.target.value })} placeholder="ex: gpt-3.5-turbo, llama3" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>API Key (Opcional)</Label>
+                  <Input type="password" value={config.apiKey || ''} onChange={e => setLocalConfig({ ...config, apiKey: e.target.value })} placeholder="sk-..." />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Base URL (Ollama)</Label>
+                  <Input value={config.baseUrl || ''} onChange={e => setLocalConfig({ ...config, baseUrl: e.target.value })} placeholder="http://localhost:11434" />
+                </div>
+
+                <Button onClick={saveSettings} className="w-full mt-4">
+                  <Save className="w-4 h-4 mr-2" /> Salvar Configuração
+                </Button>
+              </div>
+            ) : (
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4 pb-2">
+                  {messages.length === 0 && (
+                    <div className="text-center text-slate-500 text-sm mt-10">
+                      <Bot className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                      <p>Olá! Eu controlo o CRM. <br /> Peça para navegar, criar leads ou ver dados.</p>
+                    </div>
+                  )}
+                  {messages.map((msg, idx) => (
                     <div
+                      key={idx}
                       className={cn(
-                        "rounded-2xl px-4 py-2.5 max-w-[85%] text-sm shadow-sm",
-                        msg.role === 'user' 
-                          ? "bg-blue-600 text-white rounded-br-none" 
-                          : "bg-white text-slate-800 border border-slate-100 rounded-bl-none"
+                        "flex w-full",
+                        msg.role === 'user' ? "justify-end" : "justify-start"
                       )}
                     >
-                      {msg.content}
+                      <div
+                        className={cn(
+                          "rounded-2xl px-4 py-2.5 max-w-[85%] text-sm shadow-sm",
+                          msg.role === 'user'
+                            ? "bg-blue-600 text-white rounded-br-none"
+                            : msg.role === 'tool'
+                              ? "bg-slate-200 text-slate-600 font-mono text-xs p-2"
+                              : "bg-white text-slate-800 border border-slate-100 rounded-bl-none"
+                        )}
+                      >
+                        {msg.role === 'tool' ? `[Tool: ${msg.name}] ${msg.content}` : msg.content}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {isTyping && (
-                  <div className="flex justify-start w-full">
-                    <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start w-full">
+                      <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                      </div>
                     </div>
-                  </div>
-                )}
-                <div ref={scrollRef} />
-              </div>
-            </ScrollArea>
+                  )}
+                  <div ref={scrollRef} />
+                </div>
+              </ScrollArea>
+            )}
+
           </CardContent>
-          <CardFooter className="p-3 bg-white border-t">
-            <form onSubmit={handleSend} className="flex w-full gap-2">
-              <Input 
-                placeholder="Digite um comando..." 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                className="flex-1 focus-visible:ring-blue-500"
-              />
-              <Button type="submit" size="icon" className="bg-blue-600 hover:bg-blue-700">
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </CardFooter>
+          {!showSettings && (
+            <CardFooter className="p-3 bg-white border-t">
+              <form onSubmit={handleSend} className="flex w-full gap-2">
+                <Input
+                  placeholder="Digite um comando..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  className="flex-1 focus-visible:ring-blue-500"
+                  disabled={isLoading}
+                />
+                <Button type="submit" size="icon" className="bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+            </CardFooter>
+          )}
         </>
       )}
     </Card>
   );
 }
+
