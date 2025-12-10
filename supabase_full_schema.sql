@@ -12,9 +12,9 @@
   ## Estrutura:
   1. Extensões (uuid-ossp)
   2. Enums (Status, Tipos, Categorias)
-  3. Tabelas Core (users, leads, schedules, tasks, financial, etc.)
-  4. RLS (Row Level Security) básico
-  5. Triggers para updated_at
+   3. Tabelas Core (users, leads, schedules, tasks, financial, etc.) com user_id
+   4. RLS (Row Level Security) estrito (Tenant Isolation)
+   5. Triggers para updated_at e set_user_id
 */
 
 -- 1. Extensões
@@ -159,15 +159,52 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.collaborators ENABLE ROW LEVEL SECURITY;
 
--- Políticas Permissivas (Para desenvolvimento rápido - Em prod refinar por user_id)
-CREATE POLICY "Acesso total para autenticados" ON public.users FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total leads" ON public.leads FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total schedules" ON public.schedules FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total tasks" ON public.tasks FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total equipments" ON public.equipments FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total transactions" ON public.transactions FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total quotes" ON public.quotes FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Acesso total collaborators" ON public.collaborators FOR ALL USING (auth.role() = 'authenticated');
+-- Políticas Estritas (Tenant Isolation)
+-- Users
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read own profile" ON public.users USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.users WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON public.users WITH CHECK (auth.uid() = id);
+
+-- Leads
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own leads" ON public.leads USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_lead_created_set_user BEFORE INSERT ON public.leads FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
+
+-- Schedules
+ALTER TABLE public.schedules ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own schedules" ON public.schedules USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_schedule_created_set_user BEFORE INSERT ON public.schedules FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
+
+-- Tasks
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own tasks" ON public.tasks USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_task_created_set_user BEFORE INSERT ON public.tasks FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
+
+-- Equipments
+ALTER TABLE public.equipments ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+ALTER TABLE public.equipments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own equipments" ON public.equipments USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_equipment_created_set_user BEFORE INSERT ON public.equipments FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
+
+-- Transactions
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own transactions" ON public.transactions USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_transaction_created_set_user BEFORE INSERT ON public.transactions FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
+
+-- Quotes
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own quotes" ON public.quotes USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_quote_created_set_user BEFORE INSERT ON public.quotes FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
+
+-- Collaborators
+ALTER TABLE public.collaborators ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own collaborators" ON public.collaborators USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_collaborator_created_set_user BEFORE INSERT ON public.collaborators FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
 
 -- Trigger para criar perfil público ao criar usuário
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -279,23 +316,31 @@ ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 
 -- Inventory Items
 DROP POLICY IF EXISTS "Enable all access for inventory_items" ON inventory_items;
-CREATE POLICY "Enable all access for inventory_items" ON inventory_items
-FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+CREATE POLICY "Users can manage own inventory items" ON inventory_items
+USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_inv_item_created_set_user BEFORE INSERT ON inventory_items FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
 
 -- Inventory Categories
 DROP POLICY IF EXISTS "Enable all access for inventory_categories" ON inventory_categories;
-CREATE POLICY "Enable all access for inventory_categories" ON inventory_categories
-FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE inventory_categories ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+CREATE POLICY "Users can read global and manage own categories" ON inventory_categories
+USING (user_id IS NULL OR auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_inv_cat_created_set_user BEFORE INSERT ON inventory_categories FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
 
 -- Inventory Movements
 DROP POLICY IF EXISTS "Enable all access for inventory_movements" ON inventory_movements;
-CREATE POLICY "Enable all access for inventory_movements" ON inventory_movements
-FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+CREATE POLICY "Users can manage own inventory movements" ON inventory_movements
+USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_inv_mov_created_set_user BEFORE INSERT ON inventory_movements FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
 
 -- Inventory Suppliers
 DROP POLICY IF EXISTS "Enable all access for inventory_suppliers" ON inventory_suppliers;
-CREATE POLICY "Enable all access for inventory_suppliers" ON inventory_suppliers
-FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE inventory_suppliers ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+CREATE POLICY "Users can manage own suppliers" ON inventory_suppliers
+USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER on_inv_sup_created_set_user BEFORE INSERT ON inventory_suppliers FOR EACH ROW EXECUTE PROCEDURE public.set_user_id();
 
 -- Quotes
 DROP POLICY IF EXISTS "Enable all access for quotes" ON quotes;

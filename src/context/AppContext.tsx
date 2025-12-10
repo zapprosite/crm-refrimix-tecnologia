@@ -459,6 +459,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       imported.forEach(tx => addTransaction(tx));
       toast.success(`${imported.length} transações importadas!`);
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       toast.error('Erro ao importar CSV');
     }
   };

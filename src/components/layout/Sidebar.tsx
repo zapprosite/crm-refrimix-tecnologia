@@ -11,7 +11,8 @@ import {
   Wrench,
   Wallet,
   ClipboardList,
-  ShieldCheck
+  ShieldCheck,
+  Package // Import Package icon
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
@@ -23,6 +24,7 @@ const menuItems = [
   { icon: ClipboardList, label: 'Tarefas & Equipe', path: '/tasks' },
   { icon: FileText, label: 'Orçamentos', path: '/quotes' },
   { icon: Wrench, label: 'Manutenção / PMOC', path: '/maintenance' },
+  { icon: Package, label: 'Estoque', path: '/inventory' },
   { icon: Wallet, label: 'Financeiro', path: '/finance' },
 ];
 

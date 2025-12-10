@@ -43,7 +43,7 @@ export function useTransactions(): UseTransactionsReturn {
                     entity: t.entity
                 })));
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching transactions:', error);
             toast.error('Erro ao carregar transações.');
         } finally {
@@ -85,9 +85,10 @@ export function useTransactions(): UseTransactionsReturn {
             } else {
                 throw new Error('Nenhum dado retornado. Verifique permissões.');
             }
-        } catch (error: any) {
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
             console.error('Error adding transaction:', error);
-            toast.error(`Erro ao adicionar transação: ${error.message}`);
+            toast.error(`Erro ao adicionar transação: ${message}`);
             return false;
         }
     }, []);
@@ -98,8 +99,9 @@ export function useTransactions(): UseTransactionsReturn {
             if (error) throw error;
             setTransactions(prev => prev.map(t => t.id === id ? { ...t, entity } : t));
             toast.success(`Entidade alterada para ${entity}!`);
-        } catch (error: any) {
-            toast.error(`Erro ao atualizar entidade: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao atualizar entidade: ${message}`);
         }
     }, []);
 
@@ -109,8 +111,9 @@ export function useTransactions(): UseTransactionsReturn {
             if (error) throw error;
             setTransactions(prev => prev.filter(t => t.id !== id));
             toast.success('Transação excluída!');
-        } catch (error: any) {
-            toast.error(`Erro ao excluir transação: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao excluir transação: ${message}`);
         }
     }, []);
 

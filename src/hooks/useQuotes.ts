@@ -33,7 +33,7 @@ export function useQuotes(): UseQuotesReturn {
                     totalValue: q.total_value
                 })));
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching quotes:', error);
             toast.error('Erro ao carregar orçamentos.');
         } finally {
@@ -63,9 +63,9 @@ export function useQuotes(): UseQuotesReturn {
                 setQuotes(prev => [newQuote, ...prev]);
                 toast.success('Orçamento salvo com sucesso!');
             }
-        } catch (error: any) {
-            console.error('Error saving quote:', error);
-            toast.error(`Erro ao salvar orçamento: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao salvar orçamento: ${message}`);
         } finally {
             setLoading(false);
         }
@@ -77,7 +77,7 @@ export function useQuotes(): UseQuotesReturn {
             if (error) throw error;
             setQuotes(prev => prev.filter(q => q.id !== id));
             toast.success('Orçamento excluído.');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error deleting quote:', error);
             toast.error('Erro ao excluir orçamento.');
         }

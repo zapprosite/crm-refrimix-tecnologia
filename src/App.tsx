@@ -7,6 +7,7 @@ import { Quotes } from './pages/Quotes';
 import { Maintenance } from './pages/Maintenance';
 import { Finance } from './pages/Finance';
 import { Tasks } from './pages/Tasks';
+import { Inventory } from './pages/Inventory';
 import { AdminUsers } from './pages/AdminUsers'; // Import Admin Page
 import { Toaster } from 'sonner';
 import { AppProvider } from './context/AppContext';
@@ -58,6 +59,7 @@ function AuthGuard() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="/inventory" element={<Inventory />} />
             <Route path="/finance" element={<Finance />} />
 
             {/* Admin Route - Only accessible by Super Admin */}

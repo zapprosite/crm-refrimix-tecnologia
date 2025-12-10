@@ -29,11 +29,9 @@ export function useCollaborators(): UseCollaboratorsReturn {
             if (data) {
                 setCollaborators(data);
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching collaborators:', error);
             toast.error('Erro ao carregar colaboradores.');
-        } finally {
-            setLoading(false);
         }
     }, []);
 
@@ -53,8 +51,9 @@ export function useCollaborators(): UseCollaboratorsReturn {
                 setCollaborators(prev => [...prev, { ...data[0], active: true }]);
                 toast.success('Colaborador adicionado!');
             }
-        } catch (error: any) {
-            toast.error(`Erro ao adicionar colaborador: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao adicionar colaborador: ${message}`);
         }
     }, []);
 
@@ -64,8 +63,9 @@ export function useCollaborators(): UseCollaboratorsReturn {
             if (error) throw error;
             setCollaborators(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
             toast.success('Colaborador atualizado!');
-        } catch (error: any) {
-            toast.error(`Erro ao atualizar colaborador: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao atualizar colaborador: ${message}`);
         }
     }, []);
 
@@ -75,8 +75,9 @@ export function useCollaborators(): UseCollaboratorsReturn {
             if (error) throw error;
             setCollaborators(prev => prev.filter(c => c.id !== id));
             toast.success('Colaborador removido!');
-        } catch (error: any) {
-            toast.error(`Erro ao remover colaborador: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao remover colaborador: ${message}`);
         }
     }, []);
 

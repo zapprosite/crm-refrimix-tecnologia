@@ -41,7 +41,7 @@ export function useTasks(): UseTasksReturn {
                     quoteId: t.quote_id
                 })));
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching tasks:', error);
             toast.error('Erro ao carregar tarefas.');
         } finally {
@@ -69,8 +69,9 @@ export function useTasks(): UseTasksReturn {
                 setTasks(prev => [...prev, { ...task, id: data[0].id, status: 'Pendente' }]);
                 toast.success('Tarefa criada!');
             }
-        } catch (error: any) {
-            toast.error(`Erro ao criar tarefa: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao criar tarefa: ${message}`);
         }
     }, []);
 
@@ -80,8 +81,9 @@ export function useTasks(): UseTasksReturn {
             if (error) throw error;
             setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
             toast.success('Status da tarefa atualizado!');
-        } catch (error: any) {
-            toast.error(`Erro ao atualizar tarefa: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao atualizar tarefa: ${message}`);
         }
     }, []);
 
@@ -91,8 +93,9 @@ export function useTasks(): UseTasksReturn {
             if (error) throw error;
             setTasks(prev => prev.map(t => t.id === id ? { ...t, date: newDate } : t));
             toast.success('Tarefa movida!');
-        } catch (error: any) {
-            toast.error(`Erro ao mover tarefa: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao mover tarefa: ${message}`);
         }
     }, []);
 
@@ -102,8 +105,9 @@ export function useTasks(): UseTasksReturn {
             if (error) throw error;
             setTasks(prev => prev.filter(t => t.id !== id));
             toast.success('Tarefa excluída!');
-        } catch (error: any) {
-            toast.error(`Erro ao excluir tarefa: ${error.message}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao excluir tarefa: ${message}`);
         }
     }, []);
 

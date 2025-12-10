@@ -76,7 +76,7 @@ export function useInventory(): UseInventoryReturn {
                 createdAt: m.created_at,
                 userId: m.user_id
             })));
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching inventory:', error);
             toast.error('Erro ao carregar estoque.');
         } finally {
@@ -116,7 +116,7 @@ export function useInventory(): UseInventoryReturn {
                 }]);
                 toast.success('Item adicionado ao estoque!');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error adding inventory item:', error);
             toast.error('Erro ao adicionar item. Verifique o SKU.');
         }
@@ -184,7 +184,7 @@ export function useInventory(): UseInventoryReturn {
             }
 
             toast.success('Estoque atualizado!');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error updating inventory:', error);
             toast.error('Erro ao atualizar estoque.');
         }
@@ -213,7 +213,7 @@ export function useInventory(): UseInventoryReturn {
                 }]);
                 toast.success('Fornecedor cadastrado!');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error adding supplier:', error);
             toast.error('Erro ao cadastrar fornecedor.');
         }

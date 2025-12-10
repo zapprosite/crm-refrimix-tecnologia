@@ -35,9 +35,10 @@ export function useLeads(): UseLeadsReturn {
             if (data) {
                 setLeads(data.map(l => ({ ...l, date: l.created_at })));
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error fetching leads:', error);
-            toast.error('Erro ao carregar leads.');
+            toast.error('Erro ao carregar leads, tente novamente.');
+            setLeads([]);
         } finally {
             setLoading(false);
         }
@@ -86,10 +87,11 @@ export function useLeads(): UseLeadsReturn {
         try {
             const { error } = await supabase.from('leads').update({ status }).eq('id', id);
             if (error) throw error;
-            setLeads(prev => prev.map(l => l.id === id ? { ...l, status: status as Lead['status'] } : l));
-            toast.success('Status atualizado!');
-        } catch (error: any) {
-            toast.error(`Erro ao atualizar status: ${error.message}`);
+            setLeads(prev => prev.map(lead => lead.id === id ? { ...lead, status: status as Lead['status'] } : lead));
+            toast.success(`Status atualizado para ${status}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            toast.error(`Erro ao atualizar status: ${message}`);
         }
     }, []);
 
