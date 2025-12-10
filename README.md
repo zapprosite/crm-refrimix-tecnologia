@@ -1,10 +1,25 @@
 # CRM Refrimix Tecnologia ❄️
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Status](https://img.shields.io/badge/status-stable-success.svg)
+![Version](https://img.shields.io/badge/version-v2.0-blue.svg)
+![Security](https://img.shields.io/badge/security-RLS%20Tenant%20Isolation-green.svg)
+![Tests](https://img.shields.io/badge/tests-100%25%20Passing-brightgreen.svg)
 
 > Sistema completo de gestão para empresas de climatização e HVAC, desenvolvido com tecnologias modernas para otimizar operações, financeiro e relacionamento com clientes.
+
+---
+
+## 📸 Galeria
+
+<div align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard Principal" width="800"/>
+  <p><em>Dashboard com Métricas em Tempo Real</em></p>
+</div>
+
+| | |
+|:-------------------------:|:-------------------------:|
+| <img src="docs/screenshots/inventory.png" width="400" alt="Estoque"/> <br> **Controle de Estoque** | <img src="docs/screenshots/quotes.png" width="400" alt="Orçamentos"/> <br> **Gerador de Orçamentos PDF** |
+| <img src="docs/screenshots/tasks.png" width="400" alt="Tarefas"/> <br> **Gestão de Equipes (Kanban)** | <img src="docs/screenshots/finance.png" width="400" alt="Financeiro"/> <br> **Fluxo de Caixa (Dark Mode)** |
 
 ---
 
@@ -15,8 +30,8 @@ O **CRM Refrimix** é uma solução 'All-in-One' projetada para resolver dores e
 - Controle Financeiro (Fluxo de Caixa Multi-contas)
 - Agendamento de Visitas Técnicas
 - Gestão de Equipamentos e PMOC
-- Estoque e Fornecedores
-- Geração de Orçamentos em PDF
+- Estoque e Fornecedores [NOVO v2]
+- Geração de Orçamentos em PDF [NOVO v2]
 
 Desenvolvido com foco em **Performance**, **UX/UI Premium** e **Escalabilidade**.
 
@@ -24,12 +39,15 @@ Desenvolvido com foco em **Performance**, **UX/UI Premium** e **Escalabilidade**
 
 ## 🚀 Features Principais
 
+- **🔒 Segurança Enterprise**: Isolamento total de dados entre tenants (RLS).
+- **📦 Estoque Inteligente**: Controle de SKU, categorias e movimentações.
 - **Dashboard Inteligente**: KPIs em tempo real de faturamento, leads e serviços.
 - **Fluxo de Caixa Avançado**: Separação clara entre contas PF (CPF) e PJ (CNPJ) com importação OFX/CSV.
 - **Gestão de Equipamentos**: Histórico de manutenção por QR Code e controle de garantia.
 - **Automação de Orçamentos**: Crie propostas profissionais em segundos e exporte para PDF.
 - **Controle de Acesso**: Níveis de permissão para Admin e Colaboradores.
 - **Dark Mode**: Interface otimizada para uso em qualquer ambiente.
+
 
 ---
 
